@@ -13,7 +13,7 @@ CREATE TABLE Person (
     FirstName    VARCHAR(50)  NOT NULL,
     LastName     VARCHAR(50)  NOT NULL,
     DOB          DATE         NOT NULL,
-    SSN          CHAR(11)     NOT NULL,           
+    SSN          CHAR(11)     NOT NULL,
     MedCardNo    VARCHAR(20)  NULL,
     PhoneNumber  VARCHAR(20)  NULL,
     EmailAddress VARCHAR(100) NULL,
@@ -23,8 +23,7 @@ CREATE TABLE Person (
     PostalCode   VARCHAR(7)   NULL,
     CONSTRAINT pk_person PRIMARY KEY (PersonID),
     CONSTRAINT uq_person_ssn UNIQUE (SSN),
-    CONSTRAINT uq_person_medcard UNIQUE (MedCardNo),
-    CONSTRAINT ck_person_dob CHECK (DOB <= '2020-12-31')
+    CONSTRAINT uq_person_medcard UNIQUE (MedCardNo)
 ) ENGINE=InnoDB;
 
 
@@ -309,6 +308,28 @@ BEGIN
            AND MembershipYear = NEW.MembershipYear) >= 4 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'A maximum of 4 installments per membership year is allowed';
+    END IF;
+END$$
+
+-- Prevents inserting a person whose date of birth is less than 6 years before today
+CREATE TRIGGER trg_person_dob_insert
+BEFORE INSERT ON Person
+FOR EACH ROW
+BEGIN
+    IF NEW.DOB > DATE_SUB(CURDATE(), INTERVAL 6 YEAR) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'DOB must be at least 6 years before today';
+    END IF;
+END$$
+
+-- Applies the same minimum-age rule when a person's date of birth is updated
+CREATE TRIGGER trg_person_dob_update
+BEFORE UPDATE ON Person
+FOR EACH ROW
+BEGIN
+    IF NEW.DOB > DATE_SUB(CURDATE(), INTERVAL 6 YEAR) THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'DOB must be at least 6 years before today';
     END IF;
 END$$
 
